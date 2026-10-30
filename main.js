@@ -140,31 +140,66 @@
   }
 
   function buildMouthAndThroat() {
-    sphere(
-      0, 3.7, -2,
-      4.5, 4.5, 3.5,
-      new THREE.MeshStandardMaterial({
-        color: 0x9c4058,
-        transparent: true,
-        opacity: 0.13,
-        roughness: 1,
-        depthWrite: false
-      })
-    );
+  
+  // LOAD REAL MOUTH MODEL
+  const mouthLoader = new THREE.GLTFLoader();
 
-    sphere(0, 2.8, 1.1, 1.5, 0.55, 0.25, darkMaterial);
-    sphere(0, 3.35, 1.1, 1.6, 0.25, 0.3, tissueMaterial);
+  mouthLoader.load(
+    "./mouth.glb",
 
-    box(0, -0.15, -8, 5, 0.3, 19, floorMaterial);
-    box(0, 5.2, -8, 5, 0.3, 19, tissueMaterial);
+    function (gltf) {
+      const mouthModel = gltf.scene;
 
-    box(-2.6, 2.5, -8, 0.3, 5, 19, tissueMaterial);
-    box(2.6, 2.5, -8, 0.3, 5, 19, tissueMaterial);
+      // Measure the original model
+      const originalBounds =
+        new THREE.Box3().setFromObject(mouthModel);
 
-    sphere(0, 4.4, -7, 0.65, 0.5, 0.65, darkMaterial);
-    sphere(0, 4.2, -12, 0.45, 0.35, 0.45, darkMaterial);
+      const originalSize =
+        new THREE.Vector3();
 
-    sign("THROAT", 0, 3.8, -4);
+      originalBounds.getSize(originalSize);
+
+      // Resize model to approximately 4.2 units wide
+      const targetWidth = 4.2;
+
+      const scale =
+        targetWidth / originalSize.x;
+
+      mouthModel.scale.setScalar(scale);
+
+      // Measure again after resizing
+      mouthModel.updateMatrixWorld(true);
+
+      const resizedBounds =
+        new THREE.Box3().setFromObject(mouthModel);
+
+      const center =
+        new THREE.Vector3();
+
+      resizedBounds.getCenter(center);
+
+      // Place the model at the mouth entrance
+      mouthModel.position.set(
+        -center.x,
+        2.8 - center.y,
+        1.1 - center.z
+      );
+
+      scene.add(mouthModel);
+
+      console.log("Mouth model loaded successfully!");
+    },
+
+    undefined,
+
+    function (error) {
+      console.error("Could not load mouth.glb:", error);
+
+      errorMessage.textContent =
+        "The mouth model could not load. Check mouth.glb.";
+    }
+  );
+
   }
 
   function buildStomach() {

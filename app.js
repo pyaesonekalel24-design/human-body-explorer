@@ -525,28 +525,29 @@ function isTouchDevice() {
 }
 
 
-// Start the game.
-startButton.addEventListener("click", () => {
+// Start the game independently of mouse-lock success.
+startButton.addEventListener("click", async () => {
   started = true;
 
   startScreen.classList.add("hidden");
 
   if (!isTouchDevice()) {
-    renderer.domElement.requestPointerLock();
+    try {
+      await renderer.domElement.requestPointerLock();
+    } catch (error) {
+      console.warn("Mouse lock unavailable:", error);
+      messageDisplay.textContent =
+        "Click the game to enable mouse look.";
+    }
   }
 });
 
 
-// Desktop mouse look.
+// Track mouse lock without interrupting the game.
 document.addEventListener("pointerlockchange", () => {
   pointerLocked =
     document.pointerLockElement === renderer.domElement;
-
-  if (!pointerLocked && started && !isTouchDevice()) {
-    startScreen.classList.remove("hidden");
-  }
 });
-
 document.addEventListener("mousemove", (event) => {
   if (!pointerLocked) return;
 

@@ -1,0 +1,328 @@
+```css
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  background: #100d16;
+  color: #f8eef2;
+
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+canvas {
+  display: block;
+}
+
+/* Top-left interface */
+
+#hud {
+  position: fixed;
+  z-index: 2;
+
+  top: 20px;
+  left: 22px;
+  right: 22px;
+
+  pointer-events: none;
+
+  text-shadow: 0 2px 8px #000;
+}
+
+.logo {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+
+.logo span {
+  color: #f5a0b5;
+}
+
+#location {
+  margin-top: 10px;
+
+  font-size: 15px;
+  color: #ffc7d5;
+}
+
+.instructions {
+  margin-top: 7px;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  color: #d8cbd4;
+}
+
+/* First-person crosshair */
+
+#crosshair {
+  position: fixed;
+  z-index: 2;
+
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  font-size: 23px;
+  color: white;
+
+  text-shadow: 0 1px 5px black;
+
+  pointer-events: none;
+}
+
+/* Start menu */
+
+#start-screen {
+  position: fixed;
+  z-index: 10;
+
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(108, 40, 69, 0.55),
+      rgba(10, 8, 15, 0.96)
+    );
+}
+
+#start-screen.hidden {
+  display: none;
+}
+
+.start-card {
+  width: min(460px, 100%);
+
+  padding: 30px;
+
+  border: 1px solid #ffffff25;
+  border-radius: 18px;
+
+  background: rgba(24, 16, 27, 0.96);
+
+  box-shadow: 0 20px 80px #0008;
+}
+
+.eyebrow {
+  color: #f5a0b5;
+
+  font-size: 10px;
+  font-weight: bold;
+
+  letter-spacing: 2px;
+  line-height: 1.6;
+}
+
+h1 {
+  margin: 20px 0 15px;
+
+  font-size: clamp(36px, 8vw, 54px);
+  line-height: 0.98;
+
+  letter-spacing: -2px;
+}
+
+h1 span {
+  color: #f5a0b5;
+}
+
+.start-card > p {
+  color: #d8cbd4;
+
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Controls displayed in the menu */
+
+.control-list {
+  display: grid;
+  gap: 12px;
+
+  margin: 24px 0;
+
+  font-size: 13px;
+}
+
+.control-list div {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.control-list b {
+  min-width: 95px;
+
+  color: #ffc0d0;
+}
+
+.control-list span {
+  color: #ded3dd;
+}
+
+/* Start button */
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: none;
+}
+
+#start-button {
+  width: 100%;
+
+  padding: 16px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #f5a0b5;
+  color: #28131c;
+
+  font-size: 12px;
+  font-weight: 900;
+
+  letter-spacing: 2px;
+}
+
+#start-button:hover {
+  background: #ffc1d0;
+}
+
+.small-text {
+  margin-top: 15px;
+
+  color: #a99aa8;
+
+  font-size: 11px;
+  line-height: 1.6;
+
+  text-align: center;
+}
+
+/* Bottom message */
+
+#message {
+  position: fixed;
+  z-index: 2;
+
+  bottom: 20px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: max-content;
+  max-width: calc(100% - 30px);
+
+  padding: 11px 16px;
+
+  border: 1px solid #ffffff20;
+  border-radius: 9px;
+
+  background: rgba(20, 13, 24, 0.88);
+
+  color: #f3dfe7;
+
+  font-size: 12px;
+  text-align: center;
+
+  pointer-events: none;
+}
+
+/* Mobile controls */
+
+#mobile-controls {
+  display: none;
+
+  position: fixed;
+  z-index: 3;
+
+  left: 15px;
+  right: 15px;
+  bottom: 65px;
+
+  align-items: flex-end;
+  justify-content: space-between;
+
+  pointer-events: none;
+}
+
+.movement-pad,
+.vertical-buttons {
+  pointer-events: auto;
+}
+
+.movement-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.horizontal-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+#mobile-controls button {
+  width: 47px;
+  height: 47px;
+
+  border: 1px solid #ffffff35;
+  border-radius: 13px;
+
+  background: #241622d9;
+  color: white;
+
+  font-size: 17px;
+}
+
+.vertical-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vertical-buttons button {
+  width: 58px;
+  height: 40px;
+
+  font-size: 11px;
+  font-weight: bold;
+}
+
+@media (pointer: coarse) {
+  #mobile-controls {
+    display: flex;
+  }
+
+  #message {
+    bottom: 175px;
+  }
+
+  .instructions {
+    max-width: 75%;
+  }
+
+  .start-card {
+    padding: 24px;
+  }
+}
+```

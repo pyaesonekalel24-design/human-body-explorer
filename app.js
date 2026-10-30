@@ -1,582 +1,323 @@
+
 import * as THREE from "three";
 
-/* =====================================================
-   1. SCENE SETUP
-   ===================================================== */
+const container = document.getElementById("game");
+const startScreen = document.getElementById("start-screen");
+const startButton = document.getElementById("start-button");
+const hud = document.getElementById("hud");
+const locationDisplay = document.getElementById("location");
+const messageDisplay = document.getElementById("message");
 
 const scene = new THREE.Scene();
-
-scene.background = new THREE.Color(0x100d16);
-
-scene.fog = new THREE.Fog(
-  0x100d16,
-  22,
-  85
-);
+scene.background = new THREE.Color(0x170c16);
+scene.fog = new THREE.Fog(0x170c16, 12, 65);
 
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
-  0.05,
+  0.1,
   200
 );
 
-camera.rotation.order = "YXZ";
-
-// Start just outside the mouth.
-camera.position.set(0, 7, 2.5);
+camera.position.set(0, 1.7, 8);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true
 });
 
-renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio, 1.75)
-);
-
-renderer.setSize(
-  window.innerWidth,
-  window.innerHeight
-);
-
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
 
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+scene.add(new THREE.HemisphereLight(0xffc6d5, 0x321b35, 2));
 
-document.body.appendChild(renderer.domElement);
-
-
-/* =====================================================
-   2. LIGHTING
-   ===================================================== */
-
-scene.add(
-  new THREE.HemisphereLight(
-    0xffdce6,
-    0x281625,
-    2
-  )
-);
-
-const mainLight = new THREE.DirectionalLight(
-  0xffc5d3,
-  2
-);
-
-mainLight.position.set(5, 12, 8);
-
+const mainLight = new THREE.PointLight(0xffb0c4, 90, 45);
+mainLight.position.set(0, 8, -12);
 scene.add(mainLight);
 
+const stomachLight = new THREE.PointLight(0xff8b69, 100, 35);
+stomachLight.position.set(0, 6, -30);
+scene.add(stomachLight);
 
-/* =====================================================
-   3. WORLD AND MATERIALS
-   ===================================================== */
-
-const world = new THREE.Group();
-
-scene.add(world);
-
-// Collision boxes are added to this array.
-const colliders = [];
-
-function createMaterial(color, extra = {}) {
-  return new THREE.MeshStandardMaterial({
-    color,
+const materials = {
+  tissue: new THREE.MeshStandardMaterial({
+    color: 0x9d435c,
     roughness: 0.85,
-    ...extra
-  });
-}
+    side: THREE.DoubleSide
+  }),
+  darkTissue: new THREE.MeshStandardMaterial({
+    color: 0x552238,
+    roughness: 0.9,
+    side: THREE.DoubleSide
+  }),
+  floor: new THREE.MeshStandardMaterial({
+    color: 0x71364b,
+    roughness: 0.95
+  }),
+  organ: new THREE.MeshStandardMaterial({
+    color: 0xb83f55,
+    roughness: 0.7
+  }),
+  heart: new THREE.MeshStandardMaterial({
+    color: 0xc92e48,
+    roughness: 0.55
+  }),
+  lung: new THREE.MeshStandardMaterial({
+    color: 0x9e526d,
+    roughness: 0.8
+  }),
+  gold: new THREE.MeshStandardMaterial({
+    color: 0xe5a36f,
+    roughness: 0.6
+  })
+};
 
-const skinMaterial = createMaterial(0xa65e72, {
-  transparent: true,
-  opacity: 0.24,
-  depthWrite: false
-});
-
-const innerMaterial = createMaterial(0x74364e);
-const wallMaterial = createMaterial(0x54273d);
-const floorMaterial = createMaterial(0x30202f);
-
-const stomachMaterial = createMaterial(0xb94c65);
-const heartMaterial = createMaterial(0xe34c68);
-const lungMaterial = createMaterial(0x788eb7);
-const highlightMaterial = createMaterial(0xe18b9d);
-
-
-/* =====================================================
-   4. BASIC SHAPE HELPERS
-   ===================================================== */
-
-// Add a mesh at a specific position.
-function addMesh(
-  geometry,
-  material,
-  position,
-  parent = world
-) {
+function addBox(x, y, z, width, height, depth, material) {
   const mesh = new THREE.Mesh(
-    geometry,
+    new THREE.BoxGeometry(width, height, depth),
     material
   );
 
-  mesh.position.set(...position);
-
-  parent.add(mesh);
-
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
   return mesh;
 }
 
-
-// Create a scaled sphere.
-function addSphere(
-  position,
-  scale,
-  material,
-  parent = world
-) {
-  const mesh = addMesh(
+function addSphere(x, y, z, sx, sy, sz, material) {
+  const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(1, 32, 24),
-    material,
-    position,
-    parent
+    material
   );
 
-  mesh.scale.set(...scale);
-
+  mesh.position.set(x, y, z);
+  mesh.scale.set(sx, sy, sz);
+  scene.add(mesh);
   return mesh;
 }
 
-
-// Create a box and optionally make it solid.
-function addBox(
-  position,
-  size,
-  material,
-  solid = false
-) {
-  const mesh = addMesh(
-    new THREE.BoxGeometry(...size),
-    material,
-    position
-  );
-
-  if (solid) {
-    colliders.push({
-      min: new THREE.Vector3(
-        position[0] - size[0] / 2,
-        position[1] - size[1] / 2,
-        position[2] - size[2] / 2
-      ),
-
-      max: new THREE.Vector3(
-        position[0] + size[0] / 2,
-        position[1] + size[1] / 2,
-        position[2] + size[2] / 2
-      )
-    });
-  }
-
-  return mesh;
-}
-
-
-/* =====================================================
-   5. SIGNS
-   ===================================================== */
-
-// Signs use canvas textures, so no image files are needed.
-function addSign(text, position, rotationY = 0) {
+function addSign(text, x, y, z) {
   const canvas = document.createElement("canvas");
-
   canvas.width = 512;
   canvas.height = 128;
 
-  const ctx = canvas.getContext("2d");
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#29121f";
+  context.fillRect(0, 0, 512, 128);
 
-  ctx.fillStyle = "#281722";
-  ctx.fillRect(0, 0, 512, 128);
+  context.strokeStyle = "#e88ba7";
+  context.lineWidth = 5;
+  context.strokeRect(4, 4, 504, 120);
 
-  ctx.strokeStyle = "#f5a0b5";
-  ctx.lineWidth = 6;
-
-  ctx.strokeRect(5, 5, 502, 118);
-
-  ctx.fillStyle = "#ffe4eb";
-
-  ctx.font = "bold 40px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  ctx.fillText(text, 256, 64, 470);
+  context.fillStyle = "#ffffff";
+  context.font = "bold 42px Arial";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(text, 256, 64);
 
   const texture = new THREE.CanvasTexture(canvas);
 
-  texture.colorSpace = THREE.SRGBColorSpace;
-
-  const signMaterial = new THREE.MeshBasicMaterial({
-    map: texture,
-    side: THREE.DoubleSide
-  });
-
-  const sign = addMesh(
+  const sign = new THREE.Mesh(
     new THREE.PlaneGeometry(4, 1),
-    signMaterial,
-    position
+    new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide
+    })
   );
 
-  sign.rotation.y = rotationY;
-
+  sign.position.set(x, y, z);
+  scene.add(sign);
   return sign;
 }
 
-
-/* =====================================================
-   6. EXTERIOR BODY
-   ===================================================== */
-
-// A translucent exterior hints at the human silhouette.
-// It is visual only, so it does not block the entrance.
-
-addSphere(
-  [0, 9.1, -2],
-  [4, 4.7, 3.1],
-  skinMaterial
-);
-
-// Mouth opening.
-addSphere(
-  [0, 8.4, 0.45],
-  [1.45, 0.58, 0.35],
-  createMaterial(0x28121f)
-);
-
-// Lower lip.
-addSphere(
-  [0, 8.2, 0.55],
-  [1.1, 0.12, 0.12],
-  highlightMaterial
-);
-
-// Torso silhouette.
-addSphere(
-  [0, 1.5, -2],
-  [5.3, 7, 3],
-  skinMaterial
-);
-
-
-/* =====================================================
-   7. MOUTH AND THROAT
-   ===================================================== */
-
-// Main throat corridor.
-// The player travels in the negative Z direction.
-
-addBox(
-  [0, 5.4, -7],
-  [4, 0.35, 17],
-  floorMaterial,
-  true
-);
-
-addBox(
-  [0, 8.4, -7],
-  [4, 0.25, 17],
-  wallMaterial,
-  true
-);
-
-addBox(
-  [-2, 6.9, -7],
-  [0.25, 3, 17],
-  innerMaterial,
-  true
-);
-
-addBox(
-  [2, 6.9, -7],
-  [0.25, 3, 17],
-  innerMaterial,
-  true
-);
-
-// Decorative tunnel lining.
-addSphere(
-  [0, 7.4, -2],
-  [1.2, 1.2, 1.3],
-  innerMaterial
-);
-
-addSign(
-  "MOUTH -> THROAT",
-  [0, 7.7, -3]
-);
-
-
-/* =====================================================
-   8. STOMACH CHAMBER
-   ===================================================== */
-
-// A larger room at the end of the throat.
-
-addBox(
-  [0, 5.2, -14.5],
-  [11, 0.35, 9],
-  floorMaterial,
-  true
-);
-
-addBox(
-  [0, 9.4, -14.5],
-  [11, 0.3, 9],
-  wallMaterial,
-  true
-);
-
-addBox(
-  [-5.5, 7.3, -14.5],
-  [0.3, 4.2, 9],
-  innerMaterial,
-  true
-);
-
-addBox(
-  [5.5, 7.3, -14.5],
-  [0.3, 4.2, 9],
-  innerMaterial,
-  true
-);
-
-// Stomach model.
-addSphere(
-  [0, 7, -14.5],
-  [2.5, 2, 2.1],
-  stomachMaterial
-);
-
-// A smaller fold adds a little visual detail.
-addSphere(
-  [-1, 7.5, -13.5],
-  [1.1, 0.8, 0.7],
-  highlightMaterial
-);
-
-addSign(
-  "STOMACH",
-  [0, 8.8, -11.5]
-);
-
-addSign(
-  "FOOD PROCESSING DEPT.",
-  [0, 6.5, -17.5],
-  Math.PI
-);
-
-
-/* =====================================================
-   9. ORGAN GALLERY
-   ===================================================== */
-
-// Side chamber to the right of the stomach.
-// The opening is at the right-hand side of the room.
-
-addBox(
-  [7.5, 5.2, -14.5],
-  [5, 0.35, 8],
-  floorMaterial,
-  true
-);
-
-addBox(
-  [7.5, 9.4, -14.5],
-  [5, 0.3, 8],
-  wallMaterial,
-  true
-);
-
-addBox(
-  [7.5, 7.3, -18.5],
-  [5, 4.2, 0.3],
-  innerMaterial,
-  true
-);
-
-addBox(
-  [7.5, 7.3, -10.5],
-  [5, 4.2, 0.3],
-  innerMaterial,
-  true
-);
-
-addBox(
-  [10, 7.3, -14.5],
-  [0.3, 4.2, 8],
-  innerMaterial,
-  true
-);
-
-// Simplified lungs.
-addSphere(
-  [6.4, 7.1, -14],
-  [1, 1.6, 1],
-  lungMaterial
-);
-
-addSphere(
-  [8.5, 7.1, -14],
-  [1, 1.6, 1],
-  lungMaterial
-);
-
-// Heart.
-addSphere(
-  [7.5, 6.6, -13.2],
-  [0.7, 0.9, 0.65],
-  heartMaterial
-);
-
-// A simple vessel above the heart.
-addMesh(
-  new THREE.CylinderGeometry(
-    0.15,
-    0.15,
-    1.4,
-    16
-  ),
-  highlightMaterial,
-  [7.5, 8.1, -14]
-);
-
-addSign(
-  "LUNGS + HEART",
-  [7.5, 8.8, -17.8]
-);
-
-addSign(
-  "ORGAN GALLERY",
-  [7.5, 8.8, -10.8],
-  Math.PI / 2
-);
-
-
-/* =====================================================
-   10. ENVIRONMENT PARTICLES
-   ===================================================== */
-
-// Tiny floating particles give the world some atmosphere.
-
-const particlePositions = [];
-
-for (let i = 0; i < 200; i++) {
-  particlePositions.push(
-    (Math.random() - 0.5) * 20,
-    5 + Math.random() * 4,
-    -Math.random() * 27
+function buildEntrance() {
+  addSphere(
+    0, 3.5, -2,
+    4.5, 4.5, 3.5,
+    new THREE.MeshStandardMaterial({
+      color: 0x9c4058,
+      transparent: true,
+      opacity: 0.16,
+      roughness: 1,
+      depthWrite: false
+    })
   );
+
+  addSphere(
+    0, 2.8, 1.1,
+    1.5, 0.55, 0.25,
+    materials.darkTissue
+  );
+
+  addSphere(
+    0, 3.35, 1.1,
+    1.6, 0.25, 0.3,
+    materials.tissue
+  );
+
+  addBox(0, -0.15, -8, 5, 0.3, 19, materials.floor);
+  addBox(0, 5.2, -8, 5, 0.3, 19, materials.tissue);
+
+  addBox(-2.6, 2.5, -8, 0.3, 5, 19, materials.tissue);
+  addBox(2.6, 2.5, -8, 0.3, 5, 19, materials.tissue);
+
+  addSphere(0, 4.4, -7, 0.65, 0.5, 0.65, materials.darkTissue);
+  addSphere(0, 4.2, -12, 0.45, 0.35, 0.45, materials.darkTissue);
+
+  addSign("THROAT", 0, 3.8, -4);
 }
 
-const particleGeometry = new THREE.BufferGeometry();
+function buildStomach() {
+  addBox(0, -0.15, -29, 16, 0.3, 23, materials.floor);
+  addBox(0, 8.5, -29, 16, 0.3, 23, materials.tissue);
 
-particleGeometry.setAttribute(
-  "position",
-  new THREE.Float32BufferAttribute(
-    particlePositions,
-    3
-  )
-);
+  addBox(-8.1, 4, -29, 0.3, 8, 23, materials.tissue);
+  addBox(8.1, 4, -29, 0.3, 8, 23, materials.tissue);
 
-const particles = new THREE.Points(
-  particleGeometry,
-  new THREE.PointsMaterial({
-    color: 0xffb7ca,
-    size: 0.055,
-    transparent: true,
-    opacity: 0.5
-  })
-);
+  addSphere(
+    -2, 2.5, -29,
+    2.2, 1.8, 3,
+    materials.organ
+  );
 
-world.add(particles);
+  addSphere(
+    2.1, 2.2, -31,
+    2.1, 1.5, 2.5,
+    materials.darkTissue
+  );
 
+  addSphere(
+    0, 3.1, -37,
+    2.8, 1.1, 1.8,
+    materials.organ
+  );
 
-/* =====================================================
-   11. PLAYER CONTROLS
-   ===================================================== */
+  addSign("STOMACH CHAMBER", 0, 6.5, -20);
+}
 
-const keys = new Set();
-const touchMoves = new Set();
+function buildOrgans() {
+  addSphere(
+    -3.1, 5, -26,
+    1.1, 1.8, 0.8,
+    materials.lung
+  );
 
-let yaw = 0;
-let pitch = -0.04;
+  addSphere(
+    -1.1, 5, -26,
+    1.1, 1.8, 0.8,
+    materials.lung
+  );
+
+  addSphere(
+    0, 3.7, -26,
+    0.85, 1.05, 0.75,
+    materials.heart
+  );
+
+  addSphere(
+    4.2, 3.2, -25,
+    2.1, 1.1, 1.5,
+    materials.gold
+  );
+
+  const vessel = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.18, 3, 16),
+    materials.heart
+  );
+
+  vessel.position.set(0, 6.3, -26);
+  scene.add(vessel);
+
+  addSign("LUNGS", -2.1, 7.2, -25);
+  addSign("HEART", 1.5, 5.7, -25);
+  addSign("LIVER", 4.2, 5.2, -24);
+}
+
+function buildDetails() {
+  for (let i = 0; i < 35; i++) {
+    const x = (Math.random() - 0.5) * 13;
+    const y = 1 + Math.random() * 5;
+    const z = -18 - Math.random() * 21;
+
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.035, 8, 8),
+      new THREE.MeshBasicMaterial({
+        color: 0xffb5c8
+      })
+    );
+
+    particle.position.set(x, y, z);
+    scene.add(particle);
+  }
+}
+
+buildEntrance();
+buildStomach();
+buildOrgans();
+buildDetails();
 
 let started = false;
 let pointerLocked = false;
 
-const playerRadius = 0.3;
-const moveSpeed = 5.5;
-const lookSensitivity = 0.0022;
+const keys = new Set();
 
-const startScreen = document.getElementById("start-screen");
-const startButton = document.getElementById("start-button");
+let yaw = 0;
+let pitch = 0;
 
-function isTouchDevice() {
-  return window.matchMedia("(pointer: coarse)").matches;
+const moveSpeed = 5;
+const lookSensitivity = 0.002;
+
+function updateCameraRotation() {
+  camera.rotation.order = "YXZ";
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
 }
 
-
-// Start the game independently of mouse-lock success.
-startButton.addEventListener("click", async () => {
+function startGame() {
   started = true;
-
   startScreen.classList.add("hidden");
+  hud.classList.add("visible");
+  messageDisplay.textContent = "WASD to move · Mouse to look";
 
-  if (!isTouchDevice()) {
-    try {
-      await renderer.domElement.requestPointerLock();
-    } catch (error) {
-      console.warn("Mouse lock unavailable:", error);
-      messageDisplay.textContent =
-        "Click the game to enable mouse look.";
-    }
+  if (matchMedia("(pointer: fine)").matches) {
+    renderer.domElement.requestPointerLock?.();
   }
-});
+}
 
+startButton.addEventListener("click", startGame);
 
-// Track mouse lock without interrupting the game.
 document.addEventListener("pointerlockchange", () => {
   pointerLocked =
     document.pointerLockElement === renderer.domElement;
+
+  if (started && !pointerLocked) {
+    messageDisplay.textContent = "Click the game to capture your mouse";
+  }
 });
+
+renderer.domElement.addEventListener("click", () => {
+  if (started && matchMedia("(pointer: fine)").matches && !pointerLocked) {
+    renderer.domElement.requestPointerLock?.();
+  }
+});
+
 document.addEventListener("mousemove", (event) => {
-  if (!pointerLocked) return;
+  if (!started || !pointerLocked) return;
 
   yaw -= event.movementX * lookSensitivity;
   pitch -= event.movementY * lookSensitivity;
 
   pitch = THREE.MathUtils.clamp(
     pitch,
-    -Math.PI / 2 + 0.03,
-    Math.PI / 2 - 0.03
+    -Math.PI / 2 + 0.05,
+    Math.PI / 2 - 0.05
   );
+
+  updateCameraRotation();
 });
 
-renderer.domElement.addEventListener("click", () => {
-  if (started && !isTouchDevice() && !pointerLocked) {
-    renderer.domElement.requestPointerLock();
-  }
-});
-
-
-// Keyboard input.
 document.addEventListener("keydown", (event) => {
   keys.add(event.code);
-
-  if (
-    ["ArrowUp", "ArrowDown", "ArrowLeft",
-     "ArrowRight", "Space"].includes(event.code)
-  ) {
-    event.preventDefault();
-  }
 });
 
 document.addEventListener("keyup", (event) => {
@@ -585,296 +326,97 @@ document.addEventListener("keyup", (event) => {
 
 window.addEventListener("blur", () => {
   keys.clear();
-  touchMoves.clear();
 });
 
+function updateMovement(delta) {
+  if (!started) return;
 
-/* =====================================================
-   12. MOBILE INPUT
-   ===================================================== */
+  const forward = new THREE.Vector3(
+    -Math.sin(yaw),
+    0,
+    -Math.cos(yaw)
+  );
 
-// Hold the buttons to move.
+  const right = new THREE.Vector3(
+    Math.cos(yaw),
+    0,
+    -Math.sin(yaw)
+  );
 
-document.querySelectorAll("[data-move]").forEach((button) => {
-  const move = button.dataset.move;
+  const direction = new THREE.Vector3();
 
-  button.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    touchMoves.add(move);
-  });
+  if (keys.has("KeyW") || keys.has("ArrowUp")) {
+    direction.add(forward);
+  }
 
-  const release = (event) => {
-    event.preventDefault();
-    touchMoves.delete(move);
-  };
+  if (keys.has("KeyS") || keys.has("ArrowDown")) {
+    direction.sub(forward);
+  }
 
-  button.addEventListener("pointerup", release);
-  button.addEventListener("pointercancel", release);
-  button.addEventListener("lostpointercapture", release);
+  if (keys.has("KeyD") || keys.has("ArrowRight")) {
+    direction.add(right);
+  }
 
-  button.addEventListener("pointerleave", (event) => {
-    if (event.buttons === 0) {
-      touchMoves.delete(move);
-    }
-  });
-});
+  if (keys.has("KeyA") || keys.has("ArrowLeft")) {
+    direction.sub(right);
+  }
 
+  if (direction.lengthSq() > 0) {
+    direction.normalize();
 
-// Drag across the screen to look around on touch devices.
-let lastTouch = null;
-
-renderer.domElement.addEventListener(
-  "touchstart",
-  (event) => {
-    if (!started || event.touches.length !== 1) return;
-
-    const touch = event.touches[0];
-
-    // Keep the left-hand side available for movement buttons.
-    if (touch.clientX > window.innerWidth * 0.36) {
-      lastTouch = {
-        x: touch.clientX,
-        y: touch.clientY
-      };
-    }
-  },
-  { passive: true }
-);
-
-renderer.domElement.addEventListener(
-  "touchmove",
-  (event) => {
-    if (!lastTouch || event.touches.length !== 1) return;
-
-    const touch = event.touches[0];
-
-    yaw -= (touch.clientX - lastTouch.x) * 0.006;
-    pitch -= (touch.clientY - lastTouch.y) * 0.006;
-
-    pitch = THREE.MathUtils.clamp(
-      pitch,
-      -Math.PI / 2 + 0.03,
-      Math.PI / 2 - 0.03
+    const nextPosition = camera.position.clone().addScaledVector(
+      direction,
+      moveSpeed * delta
     );
 
-    lastTouch = {
-      x: touch.clientX,
-      y: touch.clientY
-    };
-  },
-  { passive: true }
-);
+    nextPosition.y = 1.7;
 
-renderer.domElement.addEventListener("touchend", () => {
-  lastTouch = null;
-});
+    const inThroat = nextPosition.z > -18;
 
+    const horizontalLimit = inThroat ? 2.05 : 7.4;
 
-/* =====================================================
-   13. COLLISION
-   ===================================================== */
+    nextPosition.x = THREE.MathUtils.clamp(
+      nextPosition.x,
+      -horizontalLimit,
+      horizontalLimit
+    );
 
-// Check whether the player overlaps any solid box.
+    nextPosition.z = THREE.MathUtils.clamp(
+      nextPosition.z,
+      -40,
+      9
+    );
 
-function collides(position) {
-  for (const box of colliders) {
-    const overlaps =
-      position.x + playerRadius > box.min.x &&
-      position.x - playerRadius < box.max.x &&
-
-      position.y + playerRadius > box.min.y &&
-      position.y - playerRadius < box.max.y &&
-
-      position.z + playerRadius > box.min.z &&
-      position.z - playerRadius < box.max.z;
-
-    if (overlaps) return true;
+    camera.position.copy(nextPosition);
   }
 
-  return false;
-}
-
-
-// Read the currently held movement controls.
-function getInput() {
-  return {
-    forward:
-      keys.has("KeyW") ||
-      keys.has("ArrowUp") ||
-      touchMoves.has("forward"),
-
-    backward:
-      keys.has("KeyS") ||
-      keys.has("ArrowDown") ||
-      touchMoves.has("backward"),
-
-    left:
-      keys.has("KeyA") ||
-      keys.has("ArrowLeft") ||
-      touchMoves.has("left"),
-
-    right:
-      keys.has("KeyD") ||
-      keys.has("ArrowRight") ||
-      touchMoves.has("right"),
-
-    up:
-      keys.has("Space") ||
-      touchMoves.has("up"),
-
-    down:
-      keys.has("ShiftLeft") ||
-      keys.has("ShiftRight") ||
-      touchMoves.has("down")
-  };
-}
-
-
-/* =====================================================
-   14. LOCATION DISPLAY
-   ===================================================== */
-
-const locationDisplay = document.getElementById("location");
-const messageDisplay = document.getElementById("message");
-
-function updateLocation() {
-  const { x, y, z } = camera.position;
-
-  let location = "Mouth Entrance";
-  let message = "Move forward to enter the mouth.";
-
-  if (z <= 0 && z > -4.5) {
-    location = "Mouth";
-    message = "Welcome inside. Follow the tunnel downward.";
-  } else if (z <= -4.5 && z > -10) {
-    location = "Throat";
-    message = "Keep going. The stomach is just ahead.";
-  } else if (x > 4.5 && z < -10 && z > -19) {
-    location = "Organ Gallery";
-    message = "Explore the heart and lungs.";
-  } else if (z <= -10 && x <= 4.5) {
-    location = "Stomach Chamber";
-    message = "You found the stomach. Look for the side passage.";
+  if (camera.position.z > -17) {
+    locationDisplay.textContent = "THROAT";
+  } else {
+    locationDisplay.textContent = "STOMACH CHAMBER";
   }
-
-  if (y < 5.7) {
-    message = "Careful! You're close to the lower wall.";
-  }
-
-  locationDisplay.textContent = location;
-  messageDisplay.textContent = message;
 }
 
+let previousTime = 0;
 
-/* =====================================================
-   15. GAME LOOP
-   ===================================================== */
-
-const clock = new THREE.Clock();
-
-function animate() {
+function animate(time) {
   requestAnimationFrame(animate);
 
   const delta = Math.min(
-    clock.getDelta(),
+    (time - previousTime) / 1000,
     0.05
   );
 
-  if (started) {
-    const input = getInput();
+  previousTime = time;
 
-    const forwardAxis =
-      Number(input.forward) -
-      Number(input.backward);
-
-    const sideAxis =
-      Number(input.right) -
-      Number(input.left);
-
-    const verticalAxis =
-      Number(input.up) -
-      Number(input.down);
-
-    // Forward and sideways movement follow camera direction.
-    const forward = new THREE.Vector3(
-      -Math.sin(yaw),
-      0,
-      -Math.cos(yaw)
-    );
-
-    const right = new THREE.Vector3(
-      Math.cos(yaw),
-      0,
-      -Math.sin(yaw)
-    );
-
-    const movement = new THREE.Vector3();
-
-    movement.addScaledVector(
-      forward,
-      forwardAxis
-    );
-
-    movement.addScaledVector(
-      right,
-      sideAxis
-    );
-
-    if (movement.lengthSq() > 0) {
-      movement.normalize().multiplyScalar(
-        moveSpeed * delta
-      );
-    }
-
-    movement.y = verticalAxis * moveSpeed * delta;
-
-    // Test each axis separately to slide along walls.
-    const nextX = camera.position.clone();
-    nextX.x += movement.x;
-
-    if (!collides(nextX)) {
-      camera.position.x = nextX.x;
-    }
-
-    const nextZ = camera.position.clone();
-    nextZ.z += movement.z;
-
-    if (!collides(nextZ)) {
-      camera.position.z = nextZ.z;
-    }
-
-    const nextY = camera.position.clone();
-    nextY.y += movement.y;
-
-    if (!collides(nextY)) {
-      camera.position.y = nextY.y;
-    }
-
-    // Apply first-person camera rotation.
-    camera.rotation.set(
-      pitch,
-      yaw,
-      0,
-      "YXZ"
-    );
-
-    updateLocation();
-  }
-
+  updateMovement(delta);
   renderer.render(scene, camera);
 }
 
-animate();
-
-
-/* =====================================================
-   16. RESIZE
-   ===================================================== */
+requestAnimationFrame(animate);
 
 window.addEventListener("resize", () => {
-  camera.aspect =
-    window.innerWidth / window.innerHeight;
-
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 
   renderer.setSize(
@@ -882,8 +424,5 @@ window.addEventListener("resize", () => {
     window.innerHeight
   );
 
-  renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio, 1.75)
-  );
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 });
-```

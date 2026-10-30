@@ -1,14 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Human Body Explorer</title>
-
   <link rel="stylesheet" href="./style.css">
-
-  <!-- Three.js is loaded directly from a CDN. -->
   <script type="importmap">
     {
       "imports": {
@@ -17,70 +14,28 @@
     }
   </script>
 </head>
-
 <body>
-
-  <div id="hud">
-    <div class="logo">HUMAN BODY <span>EXPLORER</span></div>
-    <div id="location">Mouth Entrance</div>
-    <div class="instructions">
-      WASD / Arrows: Move · Mouse: Look · Space: Up · Shift: Down
-    </div>
-  </div>
-
-  <div id="crosshair">+</div>
+  <div id="game"></div>
 
   <div id="start-screen">
-    <div class="start-card">
-      <div class="eyebrow">A FIRST-PERSON EXPLORATION SIMULATOR</div>
-
-      <h1>Inside the<br><span>Human Body</span></h1>
-
-      <p>
-        Enter through the mouth, travel down the throat,
-        and discover a world of giant organs and mysterious tunnels.
-      </p>
-
-      <div class="control-list">
-        <div><b>W A S D</b><span>Move around</span></div>
-        <div><b>Mouse</b><span>Look around</span></div>
-        <div><b>SPACE</b><span>Fly upward</span></div>
-        <div><b>SHIFT</b><span>Fly downward</span></div>
-        <div><b>ESC</b><span>Release mouse</span></div>
-      </div>
-
+    <div class="menu">
+      <h1>HUMAN BODY EXPLORER</h1>
+      <p>Explore the inside of a human body.</p>
       <button id="start-button">ENTER THE BODY</button>
-
-      <div class="small-text">
-        Explore freely. There are no enemies or combat.
+      <div class="instructions">
+        <p>W A S D — Move</p>
+        <p>Mouse — Look around</p>
+        <p>ESC — Release mouse</p>
       </div>
     </div>
   </div>
 
-  <!-- Mobile movement controls -->
-  <div id="mobile-controls">
-    <div class="movement-pad">
-      <button data-move="forward">▲</button>
-
-      <div class="horizontal-buttons">
-        <button data-move="left">◀</button>
-        <button data-move="backward">▼</button>
-        <button data-move="right">▶</button>
-      </div>
-    </div>
-
-    <div class="vertical-buttons">
-      <button data-move="up">UP</button>
-      <button data-move="down">DOWN</button>
-    </div>
-  </div>
-
-  <div id="message">
-    Move forward to enter the mouth.
+  <div id="hud">
+    <div id="location">MOUTH ENTRANCE</div>
+    <div id="crosshair">+</div>
+    <div id="message">WASD to explore</div>
   </div>
 
   <script type="module" src="./main.js"></script>
-
 </body>
 </html>
-```
